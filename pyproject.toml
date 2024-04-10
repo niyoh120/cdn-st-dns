@@ -12,6 +12,7 @@ cloudflare = "^2.19.2"
 httpx = "^0.27.0"
 structlog = "^24.1.0"
 apscheduler = "^3.10.4"
+maxminddb = "^2.6.0"
 
 
 [build-system]

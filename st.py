@@ -20,13 +20,16 @@ def speed_test(
     if not shutil.which(cst_path):
         raise Exception("测速工具路径不存在或不是可执行程序")
 
-    # 更新IP列表至文件
-    with open(os.path.join(work_dir, "ip.txt"), "w") as f:
+    ip_file = os.path.join(work_dir, "ip.txt")
+    ip_range_list_str = '\n'.join(ip_range_list)
+    logger.info(f"更新IP列表至文件 {ip_file}")
+    logger.info(f"IP列表:\n {ip_range_list_str}")
+    with open(ip_file, "w") as f:
         f.write("\n".join(ip_range_list))
 
     # 执行CloudflareST，进行测速优选
     # ./CloudflareST -httping -f ip.txt -tl 150 -p 0 -url https://xxx.cloudfront.net/100m.test -o result.csv
-    logger.info("进行cloudfront IP优选")
+    logger.info("进行IP优选")
     if st_url is None:
         cmd = [
             cst_path,

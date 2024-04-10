@@ -4,6 +4,7 @@ import os
 import structlog
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
+import httpx
 
 import cf
 import st
@@ -20,6 +21,11 @@ def main():
         logger.info("开始执行任务")
 
         cst_path = os.environ["CDN_ST_DNS_CST_PATH"]
+        geoip_cn_path = os.environ.get("CDN_ST_DNS_GEOIP_CN_PATH")
+        geoip_cn_url = os.environ.get(
+            "CDN_ST_DNS_GEOIP_CN_URL",
+            "https://raw.githubusercontent.com/Loyalsoldier/geoip/release/Country-only-cn-private.mmdb",
+        )
         cf_api_token = os.environ["CDN_ST_DNS_CF_API_TOKEN"]
         cf_domain = os.environ["CDN_ST_DNS_CF_DOMAIN"]
         cf_record = os.environ["CDN_ST_DNS_CF_RECORD"]
@@ -32,14 +38,29 @@ def main():
 
         cft_region_allowed = cft_region_allowed.split(",")
 
-        ip_range_list = cft.get_all_ip_range(cft_region_allowed)
-
-        if len(ip_range_list) < 1:
-            logger.warn(f"{cft_region_allowed}, 这些区域中没有IP")
-            return
-
         result_list = None
         with tempfile.TemporaryDirectory() as temp_dir:
+            if geoip_cn_path is None:
+                geoip_cn_path = os.path.join(temp_dir, "Country-cn.mmdb")
+            if not os.path.exists(geoip_cn_path):
+                logger.info("GEOIP数据库不存在, 开始下载")
+                resp = httpx.get(geoip_cn_url)
+                resp.raise_for_status()
+                with open(geoip_cn_path, "wb") as f:
+                    f.write(resp.content)
+                logger.info("GEOIP数据库下载完成")
+
+            ip_range_list = [
+                str(ip_range)
+                for ip_range in cft.get_all_ip_range(
+                    allow_region=cft_region_allowed,
+                    geoip_cn_path=geoip_cn_path,
+                )
+            ]
+            if len(ip_range_list) < 1:
+                logger.warn(f"{cft_region_allowed}, 这些区域中没有IP")
+                return
+
             result_list = st.speed_test(
                 cst_path=cst_path,
                 work_dir=temp_dir,
@@ -48,6 +69,7 @@ def main():
             if len(result_list) < 1:
                 logger.warn("没有找到合适的IP")
                 return
+
         logger.info(f"最合适的IP为: {result_list[0]}")
 
         cf.create_or_update_dns_record(
