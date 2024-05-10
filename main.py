@@ -26,10 +26,12 @@ def main():
             "CDN_ST_DNS_GEOIP_CN_URL",
             "https://raw.githubusercontent.com/Loyalsoldier/geoip/release/Country-only-cn-private.mmdb",
         )
+        cst_result_num = int(os.environ.get("CDN_ST_DNS_CST_RESULT_NUM", 5))
         cf_api_token = os.environ["CDN_ST_DNS_CF_API_TOKEN"]
         cf_domain = os.environ["CDN_ST_DNS_CF_DOMAIN"]
         cf_record = os.environ["CDN_ST_DNS_CF_RECORD"]
         cft_region_allowed = os.environ["CDN_ST_DNS_CFT_REGION_ALLOWED"]
+        cft_domain = os.environ["CDN_ST_DNS_CFT_DOMAIN"]
 
         config_dict = {
             k: v for k, v in os.environ.items() if k.startswith("CDN_ST_DNS")
@@ -65,10 +67,20 @@ def main():
                 cst_path=cst_path,
                 work_dir=temp_dir,
                 ip_range_list=ip_range_list,
+                result_num=cst_result_num,
             )
             if len(result_list) < 1:
                 logger.warn("没有找到合适的IP")
                 return
+
+        result_list = cft.filter_ip(result_list, cft_domain)
+
+        if len(result_list) < 1:
+            logger.warn(
+                f"测速最快的{len(result_list)}个ip均不可用, 请增加候选数量后重新测试"
+            )
+
+            return
 
         logger.info(f"最合适的IP为: {result_list[0]}")
 

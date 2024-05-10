@@ -37,3 +37,19 @@ def get_all_ip_range(
                 else:
                     result.append(ip_range)
     return result
+
+
+def filter_ip(ip_list: List[str], hostname: str):
+    headers = {
+        "Host": hostname,
+    }
+    extensions = {
+        "sni_hostname": hostname,
+    }
+
+    def filter(ip):
+        with httpx.Client() as client:
+            r = client.get(f"https://{ip}", headers=headers, extensions=extensions)
+            return r.status_code not in (421,)
+
+    return [ip for ip in ip_list if filter(ip)]

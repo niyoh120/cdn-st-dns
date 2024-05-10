@@ -21,7 +21,7 @@ def speed_test(
         raise Exception("测速工具路径不存在或不是可执行程序")
 
     ip_file = os.path.join(work_dir, "ip.txt")
-    ip_range_list_str = '\n'.join(ip_range_list)
+    ip_range_list_str = "\n".join(ip_range_list)
     logger.info(f"更新IP列表至文件 {ip_file}")
     logger.info(f"IP列表:\n {ip_range_list_str}")
     with open(ip_file, "w") as f:
@@ -65,6 +65,9 @@ def speed_test(
     )
 
     best_result_list = []
+    # 没有可用ip时不会产生result.csv
+    if not os.path.exists(os.path.join(work_dir, "result.csv")):
+        return best_result_list
     with open(os.path.join(work_dir, "result.csv"), "r") as f:
         r = csv.reader(f)
         next(r)
