@@ -49,7 +49,10 @@ def filter_ip(ip_list: List[str], hostname: str):
 
     def filter(ip):
         with httpx.Client() as client:
-            r = client.get(f"https://{ip}", headers=headers, extensions=extensions)
+            try:
+                r = client.get(f"https://{ip}", headers=headers, extensions=extensions)
+            except httpx.ConnectTimeout:
+                return False
             return r.status_code not in (421,)
 
     return [ip for ip in ip_list if filter(ip)]
